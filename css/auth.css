@@ -1,0 +1,25 @@
+body {
+  background: url(../img/hero-bg.jpg) no-repeat;
+  background-size: cover;
+  background-position: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.card {
+  border-radius: 15px;
+}
+
+.card h1 {
+  font-family: "Dancing Script", cursive;
+  color: var(--color-primary);
+}
+
+.btn-primary {
+  background-color: #feca00;
+  color: #000;
+  transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #004494;
+}
