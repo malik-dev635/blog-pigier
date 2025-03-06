@@ -4,8 +4,8 @@ session_start();
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
-  header("Location: auth/login.php");
-  exit;
+    header("Location: auth/login.php");
+    exit;
 }
 
 
@@ -13,27 +13,27 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 try {
-  $stmt = $pdo->prepare("SELECT username, email, created_at FROM users WHERE id = :user_id");
-  $stmt->execute([':user_id' => $user_id]);
-  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT username, email, created_at FROM users WHERE id = :user_id");
+    $stmt->execute([':user_id' => $user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  if (!$user) {
-      $_SESSION['error_message'] = "Utilisateur introuvable.";
-      header("Location: logout.php");
-      exit;
-  }
+    if (!$user) {
+        $_SESSION['error_message'] = "Utilisateur introuvable.";
+        header("Location: logout.php");
+        exit;
+    }
 
-  // Récupérer le nombre d'articles publiés
-  $stmt = $pdo->prepare("SELECT COUNT(*) as article_count FROM articles WHERE author_id = :user_id");
-  $stmt->execute([':user_id' => $user_id]);
-  $article_count = $stmt->fetch(PDO::FETCH_ASSOC)['article_count'];
+    // Récupérer le nombre d'articles publiés
+    $stmt = $pdo->prepare("SELECT COUNT(*) as article_count FROM articles WHERE author_id = :user_id");
+    $stmt->execute([':user_id' => $user_id]);
+    $article_count = $stmt->fetch(PDO::FETCH_ASSOC)['article_count'];
 
-  // Récupérer les articles de l'utilisateur
-  $stmt = $pdo->prepare("SELECT id, title, image, created_at FROM articles WHERE author_id = :user_id ORDER BY created_at DESC");
-  $stmt->execute([':user_id' => $user_id]);
-  $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Récupérer les articles de l'utilisateur
+    $stmt = $pdo->prepare("SELECT id, title, image, created_at FROM articles WHERE author_id = :user_id ORDER BY created_at DESC");
+    $stmt->execute([':user_id' => $user_id]);
+    $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-  die("Erreur SQL : " . $e->getMessage());
+    die("Erreur SQL : " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -187,10 +187,10 @@ h2 {
                     <a class="nav-link text-dark" href="article.php">Articles</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">À propos</a>
+                    <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">Contact</a>
+                    <a class="nav-link text-dark" href="contact.php">Contact</a>
                 </li>
             </ul>
 
@@ -236,34 +236,37 @@ h2 {
             </div>
           </div>
         </div>
-        <div class="col-md-8">
-          <div class="card p-4 shadow-sm">
+        <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'editor')): ?>
+    <div class="col-md-8">
+        <div class="card p-4 shadow-sm">
             <h4 class="text-center">Mes Articles</h4>
             <?php if (count($articles) > 0): ?>
-              <div class="list-group">
-                <?php foreach ($articles as $article): ?>
-                  <a href="article.php?id=<?= $article['id']; ?>" class="list-group-item list-group-item-action d-flex align-items-center">
-                    <img src="<?= htmlspecialchars($article['image'] ?? 'img/default-article.jpg'); ?>" class="me-3 rounded" style="width: 60px; height: 60px; object-fit: cover;">
-                    <div>
-                      <h6 class="mb-0"> <?= htmlspecialchars($article['title']); ?> </h6>
-                      <small class="text-muted">Publié le <?= date("d/m/Y", strtotime($article['created_at'])); ?></small>
-                    </div>
-                  </a>
-                <?php endforeach; ?>
-              </div>
+                <div class="list-group">
+                    <?php foreach ($articles as $article): ?>
+                        <a href="article.php?id=<?= $article['id']; ?>" class="list-group-item list-group-item-action d-flex align-items-center">
+                            <img src="<?= htmlspecialchars($article['image'] ?? 'img/default-article.jpg'); ?>" class="me-3 rounded" style="width: 60px; height: 60px; object-fit: cover;">
+                            <div>
+                                <h6 class="mb-0"> <?= htmlspecialchars($article['title']); ?> </h6>
+                                <small class="text-muted">Publié le <?= date("d/m/Y", strtotime($article['created_at'])); ?></small>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
             <?php else: ?>
-              <p class="text-center text-muted">Aucun article publié.</p>
+                <p class="text-center text-muted">Aucun article publié.</p>
             <?php endif; ?>
             <?php if (isset($_SESSION['success_message'])): ?>
-    <div class="alert alert-success"><?= $_SESSION['success_message'] ?></div>
-    <?php unset($_SESSION['success_message']); ?>
-<?php endif; ?>
+                <div class="alert alert-success"><?= $_SESSION['success_message'] ?></div>
+                <?php unset($_SESSION['success_message']); ?>
+            <?php endif; ?>
 
-<?php if (isset($_SESSION['error_message'])): ?>
-    <div class="alert alert-danger"><?= $_SESSION['error_message'] ?></div>
-    <?php unset($_SESSION['error_message']); ?>
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger"><?= $_SESSION['error_message'] ?></div>
+                <?php unset($_SESSION['error_message']); ?>
+            <?php endif; ?>
+        </div>
+    </div>
 <?php endif; ?>
-          </div>
         </div>
       </div>
     </div>

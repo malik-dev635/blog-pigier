@@ -10,6 +10,10 @@ if (!isset($_GET['id'])) {
 
 $article_id = intval($_GET['id']); // Récupérer et valider l'ID de l'article
 
+// Augmenter le compteur de vues de l'article
+$update_views_query = "UPDATE articles SET views = views + 1 WHERE id = :article_id";
+$stmt = $pdo->prepare($update_views_query);
+$stmt->execute([':article_id' => $article_id]);
 
 // Récupérer l'article avec l'auteur et la catégorie
 $query = "
@@ -24,7 +28,6 @@ $stmt = $pdo->prepare($query);
 $stmt->execute([':article_id' => $article_id]);
 $article = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Récupérer les commentaires de l'article
 // Récupérer les commentaires de l'article avec les informations de l'utilisateur
 try {
     $stmt = $pdo->prepare("SELECT c.*, u.username, u.profile_picture 
@@ -38,7 +41,6 @@ try {
 } catch (PDOException $e) {
     die("Erreur SQL : " . $e->getMessage());
 }
-
 
 // Vérifier si l'article existe
 if (!$article) {
@@ -73,137 +75,10 @@ if (!$article) {
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
 />
+
     <link rel="shortcut icon" href="img/logo.png" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <style>
-        body {
-            font-family: "Poppins", sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        .article-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin: 2rem auto;
-            max-width: 1200px;
-            padding: 0 1rem;
-        }
-
-        .article-content {
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .article-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #004494;
-            margin-bottom: 1rem;
-        }
-
-        .article-meta {
-            font-size: 0.9rem;
-            color: #6c757d;
-            margin-bottom: 2rem;
-        }
-
-        .article-image {
-            width: 100%;
-            height: 400px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-        }
-
-        .article-text {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            color: #333;
-        }
-
-        .sidebar {
-            background-color: #fff;
-            position: sticky;
-            top: 20px;
-            height: fit-content;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar h3 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #004494;
-            margin-bottom: 1.5rem;
-        }
-
-        .sidebar-card {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .sidebar-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar-card img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-        }
-
-        .sidebar-card h4 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #004494;
-            margin-bottom: 0.5rem;
-        }
-
-        .sidebar-card p {
-            font-size: 0.9rem;
-            color: #6c757d;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .social-links a {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            background-color: #004494;
-            color: #fff;
-            border-radius: 5px;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-        }
-
-        .social-links a:hover {
-            background-color: #003366;
-        }
-
-        @media (max-width: 768px) {
-            .article-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                order: -1;
-            }
-        }
-    </style>
+   
 </head>
 <body>
    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
@@ -230,10 +105,10 @@ if (!$article) {
                     <a class="nav-link text-dark" href="article.php">Articles</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">À propos</a>
+                    <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">Contact</a>
+                    <a class="nav-link text-dark" href="contact.php">Contact</a>
                 </li>
             </ul>
 
@@ -267,9 +142,11 @@ if (!$article) {
         <div class="article-content">
             <h1 class="article-title"><?= htmlspecialchars($article['title']) ?></h1>
             <div class="article-meta">
-                Publié le <?= date('d M Y', strtotime($article['created_at'])) ?> par 
-                <strong><?= htmlspecialchars($article['author']) ?></strong>
-            </div>
+    Publié le <?= date('d M Y', strtotime($article['created_at'])) ?> par 
+    <strong><?= htmlspecialchars($article['author']) ?></strong> | 
+    <i class="fa fa-eye"></i> <?= $article['views'] ?> Vu<?= ($article['views'] > 1) ? 's' : '' ?>
+</div>
+
             <img src="<?= htmlspecialchars($article['image']) ?>" alt="Article Image" class="article-image" />
             <div class="article-text">
                 <?=$article['content'] ?>
@@ -331,79 +208,79 @@ if (!$article) {
     <?php endif; ?>
 </div>
         </div>
-<style>
-    
-</style>
+
         <!-- Sidebar avec cartes et liens -->
-        <div class="sidebar" style="position: sticky;">
+        <div class="sidebar">
              <!-- Liens vers les réseaux sociaux -->
              <h3>Suivez-nous</h3>
              <div class="social-links mb-5">
-        <a href="#" target="_blank" class="facebook">
+        <a href="https://www.facebook.com/profile.php?id=100090831890714" target="_blank" class="facebook">
             <i class="fab fa-facebook-f"></i>
         </a>
         <a href="#" target="_blank" class="instagram">
             <i class="fab fa-instagram"></i>
         </a>
-        <a href="#" target="_blank" class="linkedin">
+        <a href="https://www.linkedin.com/school/pigiercotedivoire/" target="_blank" class="linkedin">
             <i class="fab fa-linkedin-in"></i>
         </a>
     </div>
-<style>.social-links {
+    <style>
+.social-links {
     display: flex;
-    gap: 10px; /* Espace entre les boutons */
+    gap: 15px; 
+    justify-content: start;
 }
 
 .social-links a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
-    border-radius: 8px;
+    width: 50px; 
+    height: 50px;
+    border-radius: 50%;
     text-decoration: none;
     color: white;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s, transform 0.3s;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
 }
 
 .social-links a i {
-    margin-right: 8px; /* Espace entre l'icône et le texte */
+    margin: 0; 
 }
 
-/* Couleurs spécifiques pour chaque réseau social */
+/* Couleurs spécifiques */
 .social-links a.facebook {
-    background-color: #1877f2; /* Bleu Facebook */
+    background-color: #1877f2; 
 }
 
 .social-links a.instagram {
     background: linear-gradient(45deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
-    color: white;
+}
+
+.social-links a.linkedin {
+    background-color: #0077b5;
+}
+
+/* Effets au survol */
+.social-links a:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); 
+    opacity: 0.9;
+}
+
+.social-links a.facebook:hover {
+    background-color: #166fe5;
 }
 
 .social-links a.instagram:hover {
     background: linear-gradient(45deg, #344abf, #4a43c0, #6f2f9e, #a82a6f, #c8235c, #e61414);
 }
 
-.social-links a.linkedin {
-    background-color: #0077b5; /* Bleu LinkedIn */
-}
-
-/* Effets au survol */
-.social-links a:hover {
-    transform: translateY(-2px); /* Légère élévation */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.social-links a.facebook:hover {
-    background-color: #166fe5; /* Bleu Facebook plus foncé */
-}
-
-
-
 .social-links a.linkedin:hover {
-    background-color: #006097; /* Bleu LinkedIn plus foncé */
-}</style>
+    background-color: #006097;
+}
+</style>
             <!-- Publicité ou article récent -->
             <div class="sidebar-card">
                 <img src="img/hero-bg.jpg" alt="Publicité" />

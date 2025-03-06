@@ -5,8 +5,8 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Vérifier si l'utilisateur est connecté et a les droits admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+// Vérifier si l'utilisateur est connecté et a les droits admin ou editor
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'editor')) {
     header("Location: ../auth/login.php?error=access_denied");
     exit;
 }
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = htmlspecialchars(trim($_POST['title']));
     $content = trim($_POST['content']);
     $category_id = (int) $_POST['category_id']; // Assurer un entier
-    $author_id = $_SESSION['user_id']; 
+    $author_id = $_SESSION['user_id'];
 
     // Vérifier si tous les champs sont remplis
     if (empty($title) || empty($content) || empty($category_id)) {
@@ -181,24 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     height: 600,
     plugins: [
       'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 
-      'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-      'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 
-      'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 
-      'advcode', 'editimage', 'advtemplate', 'ai', 'mentions', 'tinycomments', 
-      'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 
-      'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+      'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount'
     ],
     toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' + 
-             'link image media table mergetags | addcomment showcomments | spellcheckdialog ' + 
-             'a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | ' + 
+             'link image media table | align lineheight | checklist numlist bullist indent outdent | ' + 
              'emoticons charmap | removeformat',
-    tinycomments_mode: 'embedded',
-    tinycomments_author: 'Author name',
-    mergetags_list: [
-      { value: 'First.Name', title: 'First Name' },
-      { value: 'Email', title: 'Email' }
-    ]
-  });
+});
+
 
   // Vérifier si le formulaire existe avant d'ajouter l'écouteur d'événement
   document.addEventListener("DOMContentLoaded", function () {

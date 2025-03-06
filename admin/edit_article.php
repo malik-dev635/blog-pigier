@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Rediriger vers la page de l'article ou une autre page
-    header("Location: ../article.php?id=$article_id");
+    header("Location: dashboard.php");
     exit;
 }
 ?>
@@ -179,24 +179,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     height: 600,
     plugins: [
       'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'image', 'link', 
-      'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
-      'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 'pageembed', 
-      'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 
-      'advcode', 'editimage', 'advtemplate', 'ai', 'mentions', 'tinycomments', 
-      'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 
-      'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+      'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount'
     ],
     toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' + 
-             'link image media table mergetags | addcomment showcomments | spellcheckdialog ' + 
-             'a11ycheck typography | align lineheight | checklist numlist bullist indent outdent | ' + 
+             'link image media table | align lineheight | checklist numlist bullist indent outdent | ' + 
              'emoticons charmap | removeformat',
-    tinycomments_mode: 'embedded',
-    tinycomments_author: 'Author name',
-    mergetags_list: [
-      { value: 'First.Name', title: 'First Name' },
-      { value: 'Email', title: 'Email' }
-    ]
-  });
+});
+
 
   // Vérifier si le formulaire existe avant d'ajouter l'écouteur d'événement
   document.addEventListener("DOMContentLoaded", function () {

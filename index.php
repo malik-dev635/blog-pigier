@@ -52,7 +52,7 @@ session_start()
     <?php endif; ?>
 
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-       <div class="container-fluid px-4 px-lg-5">
+    <div class="container-fluid px-4 px-lg-5">
         <!-- Logo -->
         <a class="navbar-brand fw-bold" href="index.php" style="color: #020268">
             <img src="img/logo.png" alt="Logo" style="height: 40px" />
@@ -72,15 +72,32 @@ session_start()
                     <a class="nav-link text-dark active" href="index.php">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="article.php">Articles</a>
+                    <a class="nav-link text-dark" href="search-article.php">Articles</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">À propos</a>
+                    <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">Contact</a>
+                    <a class="nav-link text-dark" href="contact.php">Contact</a>
                 </li>
             </ul>
+
+         <!-- Barre de recherche -->
+<div class="d-flex align-items-center ms-3">
+    <!-- Icône de loupe -->
+    <button id="searchToggle" class="btn btn-link text-dark p-0">
+        <i class="fas fa-search"></i>
+    </button>
+    <!-- Barre de recherche -->
+    <div id="searchBar" class="search-bar">
+        <form action="search-article.php" method="GET" class="d-flex align-items-center">
+            <input type="text" name="search" class="form-control" placeholder="Rechercher..." id="searchInput" />
+            <button id="closeSearch" class="btn btn-link text-dark p-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </form>
+    </div>
+</div>
 
             <?php if (isset($_SESSION['user_id'])): ?>
                 <!-- Utilisateur connecté : Affichage du profil -->
@@ -105,8 +122,8 @@ session_start()
                 <a href="auth/login.php" class="btn btn-primary ms-3">Se Connecter</a>
             <?php endif; ?>
         </div>
-       </div>
-    </nav>
+    </div>
+</nav>
 
 
 
@@ -124,6 +141,7 @@ session_start()
           <a href="#articles" class="btn btn-outline-dark mt-3"
             >Voir les Articles</a
           >
+          
         </div>
         <div class="card-stack">
           <div class="card-hero card-1"></div>
@@ -160,23 +178,45 @@ $stmt = $pdo->query("
 ");
 $small_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Récupérer tous les autres articles avec auteur, catégorie et photo de profil
-$stmt = $pdo->query("
-    SELECT articles.*, users.username AS author, users.profile_picture AS author_profile, categories.name AS category_name 
-    FROM articles 
-    JOIN users ON articles.author_id = users.id 
-    JOIN article_category ON articles.id = article_category.article_id 
-    JOIN categories ON article_category.category_id = categories.id 
-    ORDER BY articles.created_at DESC 
-");
+$sql = "SELECT 
+            articles.*, 
+            categories.name AS category_name, 
+            users.username AS author, 
+            users.profile_picture AS author_profile
+        FROM 
+            articles
+        LEFT JOIN 
+            article_category ON articles.id = article_category.article_id
+        LEFT JOIN 
+            categories ON article_category.category_id = categories.id
+        LEFT JOIN 
+            users ON articles.author_id = users.id
+        GROUP BY 
+            categories.id, articles.id
+        ORDER BY 
+            categories.name, articles.created_at DESC
+        LIMIT 3"; // Limite de 3 articles par catégorie
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
 $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Grouper les articles par catégorie
+$articles_by_category = [];
+foreach ($all_articles as $article) {
+    $category_name = $article['category_name'];
+    if (!isset($articles_by_category[$category_name])) {
+        $articles_by_category[$category_name] = [];
+    }
+    $articles_by_category[$category_name][] = $article;
+}
 ?>
 
 
 <section class="custom-blog-section py-5" id="articles">
     <div class="container">
         <!-- 📰 Partie "À la Une" -->
-        <h2 class="custom-section-title text-center mb-5">À la Une</h2>
+        <h2 class="custom-section-title mb-4 mt-4">À la Une</h2>
         <div class="row gx-4 gy-4">
             <!-- Grand Article -->
             <div class="col-lg-8">
@@ -194,12 +234,12 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="custom-featured-meta">
                             <img src="<?= htmlspecialchars($featured_article['author_profile']) ?>" alt="Photo de profil de <?= htmlspecialchars($featured_article['author']) ?>" class="custom-featured-author-img" />
                             <div>
-                                <p class="custom-featured-author">
-                                    Par <strong><?= htmlspecialchars($featured_article['author']) ?></strong>
-                                </p>
-                                <p class="custom-featured-date">
-                                    <?= date('d M Y', strtotime($featured_article['created_at'])) ?>
-                                </p>
+                            <p class="custom-article-date">
+    <i class="fas fa-calendar-alt"></i> <?= date('d M Y', strtotime($article['created_at'])) ?>
+</p>
+<p class="custom-article-author">
+    <i class="fas fa-user"></i> Par <strong><?= htmlspecialchars($article['author']) ?></strong>
+</p>
                             </div>
                         </div>
                         <a href="article.php?id=<?= $featured_article['id'] ?>" class="custom-featured-button">Lire l'article</a>
@@ -220,12 +260,12 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <div class="custom-article-meta">
                                         <img src="<?= htmlspecialchars($article['author_profile']) ?>" alt="Photo de profil de <?= htmlspecialchars($article['author']) ?>" class="custom-article-author-img" />
                                         <div>
-                                            <p class="custom-article-author">
-                                                Par <strong><?= htmlspecialchars($article['author']) ?></strong>
-                                            </p>
-                                            <p class="custom-article-date">
-                                                <?= date('d M Y', strtotime($article['created_at'])) ?>
-                                            </p>
+                                        <p class="custom-article-date">
+    <i class="fas fa-calendar-alt"></i> <?= date('d M Y', strtotime($article['created_at'])) ?>
+</p>
+<p class="custom-article-author">
+    <i class="fas fa-user"></i> Par <strong><?= htmlspecialchars($article['author']) ?></strong>
+</p>
                                         </div>
                                     </div>
                                 </div>
@@ -236,36 +276,150 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <!-- 📚 Partie "Tous les Articles" -->
-        <h2 class="custom-section-title text-center mt-5 mb-4">Tous les Articles</h2>
-        <div class="row gx-4 gy-4">
-            <?php foreach ($all_articles as $article) : ?>
-                <div class="col-lg-4 col-md-6">
-                    <a href="article.php?id=<?= $article['id'] ?>" class="text-decoration-none">
-                        <div class="custom-article-card">
-                            <img src="<?= htmlspecialchars($article['image']) ?>" class="custom-article-img" alt="Article" />
-                            <div class="custom-article-content">
-                                <span class="custom-badge"><?= htmlspecialchars($article['category_name']) ?></span>
-                                <h5 class="custom-article-title"><?= htmlspecialchars($article['title']) ?></h5>
-                                <div class="custom-article-meta">
-                                    <img src="<?= htmlspecialchars($article['author_profile']) ?>" alt="Photo de profil de <?= htmlspecialchars($article['author']) ?>" class="custom-article-author-img" />
-                                    <div>
-                                        <p class="custom-article-author">
-                                            Par <strong><?= htmlspecialchars($article['author']) ?></strong>
-                                        </p>
+       <!-- Section des articles par catégorie -->
+        <?php foreach ($articles_by_category as $category_name => $articles) : ?>
+            <h2 class="custom-section-title mb-4 mt-6"><?= htmlspecialchars($category_name) ?></h2>
+            <div class="row gx-4 gy-4">
+                <?php foreach ($articles as $article) : ?>
+                    <div class="col-lg-4 col-md-6 article-item">
+                        <a href="article.php?id=<?= $article['id'] ?>" class="text-decoration-none">
+                            <div class="custom-article-card">
+                                <img src="<?= htmlspecialchars($article['image']) ?>" class="custom-article-img" alt="Article" />
+                                <div class="custom-article-content">
+                                    <span class="custom-badge"><?= htmlspecialchars($article['category_name']) ?></span>
+                                    <h5 class="custom-article-title"><?= htmlspecialchars($article['title']) ?></h5>
+                                    <div class="custom-article-meta">
+                                        <img src="<?= htmlspecialchars($article['author_profile']) ?>" alt="Photo de profil de <?= htmlspecialchars($article['author']) ?>" class="custom-article-author-img" />
+                                        <div>
                                         <p class="custom-article-date">
-                                            <?= date('d M Y', strtotime($article['created_at'])) ?>
-                                        </p>
+    <i class="fas fa-calendar-alt"></i> <?= date('d M Y', strtotime($article['created_at'])) ?>
+</p>
+<p class="custom-article-author">
+    <i class="fas fa-user"></i> Par <strong><?= htmlspecialchars($article['author']) ?></strong>
+</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </a>
-                </div>
-            <?php endforeach; ?>
-        </div>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endforeach; ?>
     </div>
 </section>
+<div class="social-sidebar">
+    <div class="social-icon linkedin">
+        <a href="https://www.linkedin.com/school/pigiercotedivoire/" target="_blank">
+            <i class="fab fa-linkedin"></i>
+        </a>
+    </div>
+    <div class="social-icon whatsapp">
+        <a href="https://www.whatsapp.com" target="_blank">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+    <div class="social-icon instagram">
+        <a href="https://www.instagram.com" target="_blank">
+            <i class="fab fa-instagram"></i>
+        </a>
+    </div>
+    <div class="social-icon facebook">
+        <a href="https://www.facebook.com/profile.php?id=100090831890714" target="_blank">
+            <i class="fab fa-facebook"></i>
+        </a>
+    </div>
+</div>
+<style>
+    /* Style de la barre latérale des réseaux sociaux */
+.social-sidebar {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+
+
+.social-icon {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    cursor: pointer;
+}
+
+
+.social-icon i {
+    color: white;
+    font-size: 24px;
+}
+
+.social-icon.linkedin {
+    background-color: #0A66C2; 
+}
+
+.social-icon.whatsapp {
+    background-color: #25D366; 
+}
+
+.social-icon.instagram {
+    background-color: #E4405F; 
+}
+
+.social-icon.facebook {
+    background-color: #1877F2; 
+}
+
+/* Effet au survol */
+.social-icon:hover {
+    transform: translateX(-10px); 
+}
+
+.social-icon.linkedin:hover {
+    background-color: #004182; 
+}
+
+.social-icon.whatsapp:hover {
+    background-color: #128C7E; 
+}
+
+.social-icon.instagram:hover {
+    background-color: #C13584; 
+}
+
+.social-icon.facebook:hover {
+    background-color: #1156A3; 
+}
+.social-sidebar {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none; 
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+</style>
+<script>
+    document.addEventListener("scroll", function () {
+    const socialSidebar = document.querySelector(".social-sidebar");
+    const secondSection = document.querySelector("section:nth-of-type(1)"); // Sélectionne la deuxième section
+
+    if (secondSection && window.scrollY > secondSection.offsetTop) {
+        socialSidebar.style.display = "flex"; // Affiche la barre latérale
+    } else {
+        socialSidebar.style.display = "none"; // Cache la barre latérale
+    }
+});
+</script>
 <footer class="blog-footer">
     <div class="container">
         <div class="footer-content">

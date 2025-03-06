@@ -3,9 +3,8 @@ require_once __DIR__ . '/../config/config.php';
 session_start();
 
 
-// Vérifier si l'utilisateur est connecté
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    // Rediriger vers la page de connexion avec un message d'erreur
+// Vérifier si l'utilisateur est connecté et a les droits admin ou editor
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'editor')) {
     header("Location: ../auth/login.php?error=access_denied");
     exit;
 }
@@ -334,7 +333,7 @@ if (isset($_GET['logout'])) {
                 <li><a href="dashboard.php">Articles</a></li>
                 <li><a href="#">Catégories</a></li>
                 <li><a href="#">Commentaires</a></li>
-                <li><a href="#">Utilisateurs</a></li>
+                <li><a href="users.php">Utilisateurs</a></li>
             </ul>
         </div>
 

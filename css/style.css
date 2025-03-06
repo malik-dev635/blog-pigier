@@ -137,7 +137,7 @@ body {
   color: #fff;
   background: var(--color-primary);
   margin: 2rem;
-  border-radius: 30px;
+  border-radius: 40px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
@@ -388,15 +388,35 @@ body {
   padding: 2rem;
 }
 
+.custom-section-title {
+  font-size: 2.5rem;
+  color: #003377;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 4rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.custom-section-title::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 4px;
+  background-color: #003377;
+  margin: 10px auto 0;
+}
+
 .custom-badge {
   background: var(--color-accent);
   color: black;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   display: inline-block;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .custom-featured-title {
@@ -404,6 +424,13 @@ body {
   font-weight: 900;
   margin-bottom: 1rem;
   color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .custom-featured-title {
+    font-size: 1.6rem;
+    margin-bottom: 0.8rem; /* Réduction de l’espace sous le titre */
+  }
 }
 
 .custom-featured-text {
@@ -828,4 +855,322 @@ body {
 .alert-light small {
   font-size: 13px;
   color: #555;
+}
+
+/* Style de la barre de recherche */
+.search-bar {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+}
+
+.search-bar.active {
+  width: 300px;
+  opacity: 1;
+}
+
+.search-bar input {
+  border: 2px solid #999;
+  border-radius: 25px;
+  outline: none;
+  padding: 8px 15px;
+  font-size: 16px;
+  width: 100%;
+  background: transparent;
+  transition: border-color 0.3s ease;
+}
+
+.search-bar input:focus {
+  border-color: #003377;
+}
+
+/* Style de l'icône de loupe */
+#searchToggle {
+  font-size: 20px;
+  cursor: pointer;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+#searchToggle:hover {
+  color: #003377;
+  transform: scale(1.1); /* Effet de zoom au survol */
+}
+
+/* Bouton de fermeture */
+#closeSearch {
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.search-bar.active #closeSearch {
+  opacity: 1;
+}
+
+#closeSearch:hover {
+  transform: scale(1.1);
+}
+#searchToggle i {
+  color: #6c757d; /* Gris bleuté */
+  transition: color 0.3s ease;
+}
+
+#searchToggle:hover i {
+  color: #003377;
+}
+
+/* Grille principale : article + sidebar */
+.article-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  margin: 2rem auto;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
+
+/* Contenu de l'article */
+.article-content {
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Titre de l'article */
+.article-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #004494;
+  margin-bottom: 1rem;
+}
+
+/* Métadonnées de l'article */
+.article-meta {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-bottom: 2rem;
+}
+
+/* Image de l'article */
+.article-image {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 2rem;
+}
+
+/* Texte de l'article */
+.article-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+}
+
+/* Section des commentaires */
+.comments-section {
+  margin-top: 3rem;
+}
+
+/* Liste des commentaires */
+.comment {
+  border-radius: 10px;
+  padding: 1rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.comment:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Auteur du commentaire */
+.comment-author {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #004494;
+}
+
+/* Photo de profil */
+.comment img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Zone de texte du formulaire */
+.comment-form textarea {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.8rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+/* Bouton de soumission */
+.comment-form button {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+}
+
+/* ✅ Responsive Design */
+@media (max-width: 1024px) {
+  .article-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .article-content {
+    padding: 1.5rem;
+  }
+
+  .article-title {
+    font-size: 2.2rem;
+  }
+
+  .article-meta {
+    font-size: 0.85rem;
+  }
+
+  .article-image {
+    height: 300px;
+  }
+
+  .article-text {
+    font-size: 1rem;
+  }
+
+  .comment img {
+    width: 45px;
+    height: 45px;
+  }
+}
+
+@media (max-width: 768px) {
+  .article-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .article-content {
+    padding: 1rem;
+  }
+
+  .article-title {
+    font-size: 1.8rem;
+  }
+
+  .article-meta {
+    font-size: 0.8rem;
+  }
+
+  .article-image {
+    height: 250px;
+  }
+
+  .article-text {
+    font-size: 0.95rem;
+  }
+
+  .comment img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .comment-form textarea {
+    font-size: 0.9rem;
+  }
+
+  .comment-form button {
+    width: 100%;
+    font-size: 1rem;
+  }
+}
+
+.sidebar {
+  background-color: #fff;
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #004494;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-card {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sidebar-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.sidebar-card h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #004494;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-card p {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.social-links {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.social-links a {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #004494;
+  color: #fff;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.social-links a:hover {
+  background-color: #003366;
+}
+
+@media (max-width: 768px) {
+  .article-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: relative;
+    top: auto;
+    margin-top: 2rem;
+  }
 }
