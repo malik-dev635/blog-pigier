@@ -1,42 +1,85 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/includes/loader.php';
 session_start();
 
+// Initialiser les variables de recherche
+$search_term = isset($_GET['search']) ? trim($_GET['search']) : '';
+$category_id = isset($_GET['category']) ? (int)$_GET['category'] : 0;
+$sort_by = isset($_GET['sort_by']) ? trim($_GET['sort_by']) : 'newest'; // Nouveau paramètre de tri
 
-// Récupérer le terme de recherche depuis l'URL
-$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-// Requête SQL pour récupérer les articles avec les informations de l'auteur et de la catégorie
+// Construire la requête SQL de base
 $sql = "SELECT 
-            articles.*, 
-            categories.name AS category_name, 
-            users.username AS author, 
-            users.profile_picture AS author_profile
+            a.*, 
+            c.name AS category_name, 
+            u.username AS author, 
+            u.profile_picture AS author_profile,
+            GROUP_CONCAT(DISTINCT cb.name) AS author_badges
         FROM 
-            articles
+            articles a
         LEFT JOIN 
-            article_category ON articles.id = article_category.article_id
+            article_category ac ON a.id = ac.article_id
         LEFT JOIN 
-            categories ON article_category.category_id = categories.id
+            categories c ON ac.category_id = c.id
         LEFT JOIN 
-            users ON articles.author_id = users.id";
+            users u ON a.author_id = u.id
+        LEFT JOIN
+            user_badges ub ON u.id = ub.user_id
+        LEFT JOIN
+            contributor_badges cb ON ub.badge_id = cb.id";
 
-// Si un terme de recherche est fourni, on ajoute une clause WHERE
-if (!empty($searchTerm)) {
-    $sql .= " WHERE articles.title LIKE :search OR categories.name LIKE :search OR users.username LIKE :search";
+// Ajouter les conditions de recherche
+$where_conditions = [];
+$params = [];
+
+if (!empty($search_term)) {
+    $where_conditions[] = "(a.title LIKE ? OR a.content LIKE ?)";
+    $params[] = "%{$search_term}%";
+    $params[] = "%{$search_term}%";
 }
 
-// Préparation et exécution de la requête
+if ($category_id > 0) {
+    $where_conditions[] = "c.id = ?";
+    $params[] = $category_id;
+}
+
+// Finaliser la requête
+if (!empty($where_conditions)) {
+    $sql .= " WHERE " . implode(" AND ", $where_conditions);
+}
+
+$sql .= " GROUP BY a.id";
+
+// Ajouter l'ordre de tri en fonction du paramètre sort_by
+switch ($sort_by) {
+    case 'oldest':
+        $sql .= " ORDER BY a.created_at ASC";
+        break;
+    case 'title_asc':
+        $sql .= " ORDER BY a.title ASC";
+        break;
+    case 'title_desc':
+        $sql .= " ORDER BY a.title DESC";
+        break;
+    case 'most_viewed':
+        $sql .= " ORDER BY a.views DESC, a.created_at DESC";
+        break;
+    case 'newest':
+    default:
+        $sql .= " ORDER BY a.created_at DESC";
+        break;
+}
+
+// Exécuter la requête
 $stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (!empty($searchTerm)) {
-    $stmt->execute(['search' => "%$searchTerm%"]);
-} else {
-    $stmt->execute(); // Exécute la requête sans filtre si aucun terme de recherche n'est fourni
-}
-
-// Récupérer les résultats sous forme de tableau associatif
-$all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Récupérer toutes les catégories pour le filtre
+$categories_query = "SELECT * FROM categories ORDER BY name";
+$stmt = $pdo->prepare($categories_query);
+$stmt->execute();
+$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -44,7 +87,7 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blog Pigier</title>
+    <title>Articles | Blog Pigier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -55,6 +98,7 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 </head>
 <body>
+    <?php require_once __DIR__ . '/includes/loader.php'; ?>
 
     <!-- Navbar -->
     <?php if (isset($_GET['login']) && $_GET['login'] === 'success'): ?>
@@ -152,24 +196,114 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="container">
         <h2 class="custom-section-title text-center mb-5">Tous les Articles</h2>
 
+        <!-- Section de filtrage -->
+        <div class="container mt-4">
+            <div class="card border-0 mb-4">
+                <div class="card-body p-4" style="background: linear-gradient(to right, #f8f9fa, #ffffff);">
+                    <form action="" method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label text-secondary fw-semibold">
+                                <i class="fas fa-search me-2"></i>Rechercher
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg border-0" 
+                                   id="search" 
+                                   name="search" 
+                                   value="<?php echo htmlspecialchars($search_term); ?>" 
+                                   placeholder="Rechercher un article...">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="category" class="form-label text-secondary fw-semibold">
+                                <i class="fas fa-tag me-2"></i>Catégorie
+                            </label>
+                            <select class="form-select form-select-lg border-0" id="category" name="category">
+                                <option value="">Toutes les catégories</option>
+                                <?php foreach ($categories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>" 
+                                            <?php echo ($category_id == $category['id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($category['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="sort_by" class="form-label text-secondary fw-semibold">
+                                <i class="fas fa-sort me-2"></i>Trier par
+                            </label>
+                            <select class="form-select form-select-lg border-0" id="sort_by" name="sort_by">
+                                <option value="newest" <?php echo ($sort_by == 'newest') ? 'selected' : ''; ?>>Plus récents</option>
+                                <option value="oldest" <?php echo ($sort_by == 'oldest') ? 'selected' : ''; ?>>Plus anciens</option>
+                                <option value="title_asc" <?php echo ($sort_by == 'title_asc') ? 'selected' : ''; ?>>Titre (A-Z)</option>
+                                <option value="title_desc" <?php echo ($sort_by == 'title_desc') ? 'selected' : ''; ?>>Titre (Z-A)</option>
+                                <option value="most_viewed" <?php echo ($sort_by == 'most_viewed') ? 'selected' : ''; ?>>Plus vus</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" style="transition: all 0.3s ease;">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <style>
+        .filter-section {
+            background: linear-gradient(to right, #ffffff, #f8f9fa);
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #e0e0e0;
+            padding: 0.6rem 1rem;
+            transition: all 0.3s ease;
+            background-color: #ffffff;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #0d6efd;
+            box-shadow: none;
+        }
+
+        .form-label {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: #6c757d;
+        }
+
+        .btn-primary {
+            padding: 0.6rem 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+        </style>
+
         <!-- Afficher le message de recherche si un terme de recherche est fourni -->
-        <?php if (!empty($searchTerm)) : ?>
+        <?php if (!empty($search_term)) : ?>
             <div class="row mb-4">
                 <div class="col-12">
-                    <p class="search-results-message">Résultats de la recherche pour : <strong>"<?= htmlspecialchars($searchTerm) ?>"</strong></p>
+                    <p class="search-results-message">Résultats de la recherche pour : <strong>"<?= htmlspecialchars($search_term) ?>"</strong></p>
                 </div>
             </div>
         <?php endif; ?>
 
         <div class="row gx-4 gy-4">
-            <?php if (empty($all_articles)) : ?>
+            <?php if (empty($articles)) : ?>
                 <!-- Aucun article trouvé -->
                 <div class="col-12">
-                    <p>Aucun article trouvé pour "<?= htmlspecialchars($searchTerm) ?>".</p>
+                    <p>Aucun article trouvé pour "<?= htmlspecialchars($search_term) ?>".</p>
                 </div>
             <?php else : ?>
                 <!-- Afficher tous les articles ou les articles filtrés -->
-                <?php foreach ($all_articles as $article) : ?>
+                <?php foreach ($articles as $article) : ?>
                     <div class="col-lg-4 col-md-6">
                         <a href="article.php?id=<?= $article['id'] ?>" class="text-decoration-none">
                             <div class="custom-article-card">
@@ -199,62 +333,23 @@ $all_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </section>
 
     <!-- Footer -->
-    <footer class="blog-footer">
-        <div class="container">
-            <div class="footer-content">
-                <!-- Section 1 : Branding -->
-                <div class="footer-brand">
-                    <a class="navbar-brand fw-bold" href="index.php" style="color: #fff; font-size: 4rem; display: flex; align-items: center; margin-bottom: 15px;">
-                        <img src="img/logo.png" alt="Logo" style="height: 70px; margin-right: 12px;" />
-                        Blog
-                    </a>
-                    <p class="footer-description">
-                        Explorez l'innovation et l'éducation à travers nos articles et ressources inspirants.
-                    </p>
-                </div>
-
-                <!-- Section 2 : Liens rapides -->
-                <div class="footer-links">
-                    <h4>Liens rapides</h4>
-                    <ul>
-                        <li><a href="#"> Accueil<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-                        <li><a href="#"> Articles<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-                        <li><a href="#"> À propos<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-                        <li><a href="https://www.pigierci.com/"> Site Officiel<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-                        <li><a href="#"> Contact<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-                    </ul>
-                </div>
-
-                <!-- Section 3 : Newsletter -->
-                <div class="footer-newsletter">
-                    <h4>Abonnez-vous</h4>
-                    <p>Recevez les derniers articles directement dans votre boîte mail.</p>
-                    <form>
-                        <input type="email" placeholder="Votre email..." required>
-                        <button type="submit">S'abonner</button>
-                    </form>
-                </div>
-
-                <!-- Section 4 : Réseaux sociaux -->
-                <div class="footer-social">
-                    <h4>Suivez-nous</h4>
-                    <div class="social-icons">
-                        <a href="https://www.facebook.com/PIGIERCIOFFICIEL/" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                        <a href="https://www.instagram.com/pigierciofficiel/" target="_blank"><i class="fab fa-instagram"></i></a>
-                        <a href="https://www.linkedin.com/school/pigiercotedivoire/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Copyright -->
-            <div class="footer-bottom">
-                <p>&copy; 2024 Blog Pigier. Tous droits réservés. | Conçu avec <i class="fas fa-heart"></i> par Malik.</p>
-            </div>
-        </div>
-    </footer>
+    <?php include 'component/footer.php' ?>
 
     <!-- Scripts -->
     <script>
+        // Script du loader
+        window.addEventListener('load', () => {
+            const loader = document.querySelector('.loader-wrapper');
+            document.body.classList.add('loaded');
+            
+            setTimeout(() => {
+                loader.classList.add('loader-hidden');
+                loader.addEventListener('transitionend', () => {
+                    document.body.removeChild(loader);
+                });
+            }, 500);
+        });
+
         document.addEventListener("scroll", () => {
             const navbar = document.querySelector(".navbar");
             if (window.scrollY > 50) {

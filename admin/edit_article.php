@@ -11,6 +11,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
+// Récupérer les informations de l'utilisateur connecté
+$user_query = "SELECT username, profile_picture, role FROM users WHERE id = ?";
+$stmt = $pdo->prepare($user_query);
+$stmt->execute([$_SESSION['user_id']]);
+$current_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
 // Récupérer l'ID de l'article à éditer
 $article_id = $_GET['id'] ?? null;
 
@@ -98,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     />
     <link rel="shortcut icon" href="../img/logo.png" />
     <script src="https://cdn.tiny.cloud/1/epzhe26otp0t6yw6h0yg6940cawdvt1uklclgy6sxrxezg2v/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <style>
         body {
             font-family: "Poppins", sans-serif;
@@ -138,37 +146,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="form-container">
-            <h1>Modifier l'article</h1>
-            <form method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="title" class="form-label">Titre</label>
-                    <input type="text" class="form-control" id="title" name="title" value="<?= htmlspecialchars($article['title']) ?>" required>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <?php include 'includes/sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-edit me-2"></i>Modifier l'article</h1>
+                <div class="header-actions">
+                    <a href="dashboard.php" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i>
+                        Retour
+                    </a>
                 </div>
-                <div class="mb-3">
-                    <label for="content" class="form-label">Contenu</label>
-                    <textarea class="form-control" id="content" name="content" rows="10" required><?= htmlspecialchars($article['content']) ?></textarea>
+            </div>
+
+            <!-- Article Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Informations de l'article</h2>
                 </div>
-                <div class="mb-3">
-                    <label for="category_id" class="form-label">Catégorie</label>
-                    <select class="form-control" id="category_id" name="category_id" required>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?= $category['id'] ?>" <?= $category['id'] == $selected_category_id ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($category['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group mb-4">
+                                    <label for="title" class="form-label">Titre</label>
+                                    <input type="text" class="form-control" id="title" name="title" value="<?= htmlspecialchars($article['title']) ?>" required>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="content" class="form-label">Contenu</label>
+                                    <textarea class="form-control" id="content" name="content" rows="12" required><?= htmlspecialchars($article['content']) ?></textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title mb-3">Paramètres de publication</h5>
+                                        
+                                        <div class="form-group mb-4">
+                                            <label for="category_id" class="form-label">Catégorie</label>
+                                            <select class="form-select" id="category_id" name="category_id" required>
+                                                <?php foreach ($categories as $category): ?>
+                                                    <option value="<?= $category['id'] ?>" <?= $category['id'] == $selected_category_id ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($category['name']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group mb-4">
+                                            <label for="image" class="form-label">Image de couverture</label>
+                                            <?php if ($article['image']): ?>
+                                                <div class="image-preview mb-3">
+                                                    <img src="../<?= $article['image'] ?>" alt="Image actuelle" class="img-fluid rounded">
+                                                </div>
+                                            <?php endif; ?>
+                                            <input type="file" class="form-control" id="image" name="image">
+                                            <small class="text-muted">
+                                                Format recommandé : JPG, PNG. Taille max : 2MB
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-save me-2"></i>
+                                        Mettre à jour l'article
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label for="image" class="form-label">Image de couverture</label>
-                    <input type="file" class="form-control" id="image" name="image">
-                    <?php if ($article['image']): ?>
-                        <p>Image actuelle : <img src="../<?= $article['image'] ?>" alt="Image de couverture" width="400"></p>
-                    <?php endif; ?>
-                </div>
-                <button type="submit" name="submit" class="btn btn-primary">Mettre à jour l'article</button>
-            </form>
+            </div>
         </div>
     </div>
 

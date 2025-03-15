@@ -1,30 +1,42 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/loader.php';
 session_start();
 
-// Vérifier si l'utilisateur est connecté
+// Vérifier si l'utilisateur est connecté et est admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    // Rediriger vers la page de connexion avec un message d'erreur
     header("Location: ../auth/login.php?error=access_denied");
     exit;
 }
 
+// Récupérer les informations de l'utilisateur connecté
+$user_query = "SELECT username, profile_picture, role FROM users WHERE id = ?";
+$stmt = $pdo->prepare($user_query);
+$stmt->execute([$_SESSION['user_id']]);
+$current_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
 // Récupérer le terme de recherche
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 
-// Récupérer tous les utilisateurs avec recherche
-try {
-    $sql = "SELECT * FROM users 
-            WHERE username LIKE :search 
-            OR email LIKE :search 
-            OR role LIKE :search 
-            ORDER BY created_at DESC";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([':search' => "%$search%"]);
+// Requête pour récupérer les utilisateurs avec le nombre d'articles
+$users_query = "
+    SELECT 
+        u.id,
+        u.username,
+        u.email,
+        u.role,
+        u.profile_picture,
+        u.created_at,
+        COUNT(DISTINCT a.id) as article_count
+    FROM users u
+    LEFT JOIN articles a ON u.id = a.author_id
+    WHERE u.username LIKE :search OR u.email LIKE :search
+    GROUP BY u.id
+    ORDER BY u.created_at DESC";
+
+$stmt = $pdo->prepare($users_query);
+$stmt->execute(['search' => "%$search%"]);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Erreur SQL : " . $e->getMessage());
-}
 ?>
 
 <!DOCTYPE html>
@@ -33,188 +45,94 @@ try {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestion des Utilisateurs | Blog Pigier</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="../img/logo.png" />
     <style>
-        .dashboard {
-            display: flex;
-            min-height: 100vh;
+        .user-badge {
+            margin: 0 3px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
         }
-
-        .sidebar {
-            width: 250px;
-            background-color: #004494;
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            border-radius: 0.2rem;
+            margin: 0 0.2rem;
+        }
+        .btn-edit {
+            color: #000;
+            border: 1px solid #ffc107;
+            background-color: #ffc107;
+        }
+        .btn-edit:hover {
+            background-color: #ffca2c;
+            color: #000;
+        }
+        .btn-delete {
             color: #fff;
-            padding: 1.5rem;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #dc3545;
+            background-color: #dc3545;
         }
-
-        .sidebar h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
+        .btn-delete:hover {
+            background-color: #bb2d3b;
+            color: #fff;
         }
-
-        .sidebar ul {
+        .header .btn-primary {
+            background-color: #020268;
+            border-color: #020268;
+        }
+        .header .btn-primary:hover {
+            background-color: #010144;
+            border-color: #010144;
+        }
+        .modal-backdrop {
+            z-index: 1040;
+        }
+        .modal {
+            z-index: 1050;
+        }
+        .profile-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 10px 0;
+        }
+        .submenu {
             list-style: none;
-            padding: 0;
+            padding-left: 20px;
+            margin: 0;
         }
-
-        .sidebar ul li {
-            margin-bottom: 1rem;
-        }
-
-        .sidebar ul li a {
+        .submenu li a {
+            padding: 8px 15px;
+            display: block;
             color: #fff;
             text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
+            font-size: 0.9em;
+            transition: all 0.3s;
         }
-
-        .sidebar ul li a:hover {
-            color: #feca00;
+        .submenu li a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
         }
-
-        .main-content {
-            flex: 1;
-            padding: 2rem;
+        .submenu-toggle {
+            cursor: pointer;
         }
-
-        .header {
+        .submenu-toggle .fa-chevron-down {
+            transition: transform 0.3s;
+            font-size: 0.8em;
+        }
+        .submenu-toggle[aria-expanded="true"] .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+        .sidebar-nav > li > a.submenu-toggle {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #004494;
-        }
-
-        .btn-logout {
-            background-color: #feca00;
-            color: #004494;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 25px;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-logout:hover {
-            background-color: #e0b200;
-        }
-
-        .users-table {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .users-table h2 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #004494;
-            margin-bottom: 1.5rem;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .table th {
-            background-color: #004494;
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .table tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .btn-action {
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-edit {
-            background-color: #feca00;
-            color: #004494;
-            border: none;
-        }
-
-        .btn-edit:hover {
-            background-color: #e0b200;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-delete:hover {
-            background-color: #c82333;
-        }
-
-        .btn-save {
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-save:hover {
-            background-color: #218838;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                height: auto;
-                padding: 1rem;
-            }
-
-            .sidebar h2 {
-                margin-bottom: 1rem;
-            }
-
-            .main-content {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .btn-logout {
-                padding: 0.5rem 1rem;
-            }
-
-            .users-table h2 {
-                font-size: 1.5rem;
-            }
         }
     </style>
 </head>
@@ -222,80 +140,150 @@ try {
     <div class="dashboard">
         <!-- Sidebar -->
         <div class="sidebar">
-        <a class="navbar-brand fw-bold" href="../index.php" style="color: #fff">
-            <img src="../img/logo.png" alt="Logo" style="height: 40px" />
-            blog
-        </a>
-            <h2>Dashboard</h2>
-            <ul>
-            <li><a href="dashboard.php">Articles</a></li>
-                <li><a href="#">Catégories</a></li>
-                <li><a href="#">Commentaires</a></li>
-                <li><a href="users.php">Utilisateurs</a></li>
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <img src="../<?php echo htmlspecialchars($current_user['profile_picture'] ?? 'img/default-avatar.png'); ?>" 
+                         alt="Photo de profil" 
+                         class="user-avatar">
+                    <div class="user-info">
+                        <h2 class="user-name"><?php echo htmlspecialchars($current_user['username']); ?></h2>
+                        <span class="user-role"><?php echo ucfirst(htmlspecialchars($current_user['role'])); ?></span>
+                    </div>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="dashboard.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="articles.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'articles.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-newspaper"></i>
+                        <span>Articles</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="categories.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'categories.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-tags"></i>
+                        <span>Catégories</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="users.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'users.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-users"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="comments.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'comments.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-comments"></i>
+                        <span>Commentaires</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="badges.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'badges.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-award"></i>
+                        <span>Badges</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="../auth/logout.php">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Déconnexion</span>
+                    </a>
+                </li>
             </ul>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
             <div class="header">
-                <h1>Gestion des Utilisateurs</h1>
-                <a href="../auth/logout.php" class="btn btn-logout">Déconnexion</a>
+                <h1><i class="fas fa-users me-2"></i>Gestion des Utilisateurs</h1>
+                <div class="header-actions">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="fas fa-user-plus"></i>
+                        Nouvel Utilisateur
+                    </button>
+                </div>
             </div>
 
-            <!-- Tableau des utilisateurs -->
-            <div class="users-table">
-                <h2>Liste des Utilisateurs</h2>
-                <!-- Barre de recherche côté serveur -->
-                <div class="mb-4">
-                    <form action="users.php" method="GET" class="d-flex">
-                        <input type="text" name="search" class="form-control me-2" placeholder="Rechercher un utilisateur..." value="<?= htmlspecialchars($search) ?>">
-                        <button type="submit" class="btn btn-primary">Rechercher</button>
+            <!-- Search Bar -->
+            <div class="search-bar mb-4">
+                <form action="" method="GET" class="d-flex">
+                    <input type="text" 
+                           name="search" 
+                           class="form-control" 
+                           placeholder="Rechercher un utilisateur..." 
+                           value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit" class="btn btn-primary ms-2">
+                        <i class="fas fa-search"></i>
+                    </button>
                     </form>
                 </div>
-                <!-- Barre de recherche côté client -->
-                <div class="mb-4">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Rechercher en temps réel..." oninput="filterUsers()">
+
+            <!-- Users List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Liste des Utilisateurs</h2>
                 </div>
-                <table class="table" id="usersTable">
+                <div class="table-responsive">
+                    <table class="table">
                     <thead>
                         <tr>
-                            <th>Nom d'utilisateur</th>
+                                <th>Utilisateur</th>
                             <th>Email</th>
                             <th>Rôle</th>
+                                <th>Articles</th>
+                                <th>Date d'inscription</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($users as $user): ?>
                             <tr>
-                                <td><?= htmlspecialchars($user['username']) ?></td>
-                                <td><?= htmlspecialchars($user['email']) ?></td>
-                                <td>
-                                    <?php if ($user['id'] == 1): ?>
-                                        <select name="role" class="form-select" disabled>
-                                            <option value="admin" selected>Administrateur</option>
-                                        </select>
-                                    <?php else: ?>
-                                        <form action="update_user_role.php" method="POST" class="d-inline">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <select name="role" class="form-select" onchange="this.form.submit()">
-                                                <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>Utilisateur</option>
-                                                <option value="editor" <?= $user['role'] === 'editor' ? 'selected' : '' ?>>Éditeur</option>
-                                                <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Administrateur</option>
-                                            </select>
-                                        </form>
-                                    <?php endif; ?>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="../<?php echo htmlspecialchars($user['profile_picture'] ?? 'img/default-avatar.png'); ?>" 
+                                                 alt="Avatar" 
+                                                 class="rounded-circle me-2" 
+                                                 style="width: 32px; height: 32px;">
+                                            <?php echo htmlspecialchars($user['username']); ?>
+                                        </div>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                    <td>
+                                        <span class="badge <?php 
+                                            echo $user['role'] === 'admin' ? 'bg-danger' : 
+                                                ($user['role'] === 'editor' ? 'bg-warning text-dark' : 'bg-info'); 
+                                        ?>">
+                                            <?php echo ucfirst(htmlspecialchars($user['role'])); ?>
+                                        </span>
                                 </td>
-                                
-                                <td>
-    <?php if ($user['id'] != 1): ?>
-        <a href="edit_user.php?id=<?= $user['id'] ?>" class="btn btn-edit btn-action">
-            <i class="fas fa-edit"></i> Modifier
-        </a>
-        <a href="delete_user.php?id=<?= $user['id'] ?>" class="btn btn-delete btn-action" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">
-            <i class="fas fa-trash"></i> Supprimer
+                                    <td><?php echo $user['article_count']; ?></td>
+                                    <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" 
+                                                    class="btn btn-action btn-edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editUserModal"
+                                                    data-user-id="<?php echo $user['id']; ?>"
+                                                    data-username="<?php echo htmlspecialchars($user['username']); ?>"
+                                                    data-email="<?php echo htmlspecialchars($user['email']); ?>"
+                                                    data-role="<?php echo htmlspecialchars($user['role']); ?>"
+                                                    data-profile-picture="<?php echo htmlspecialchars($user['profile_picture']); ?>">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                                <a href="delete_user.php?id=<?php echo $user['id']; ?>"
+                                                   class="btn btn-action btn-delete"
+                                                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">
+                                                    <i class="fas fa-trash"></i>
         </a>
     <?php endif; ?>
+                                        </div>
 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -304,27 +292,152 @@ try {
             </div>
         </div>
     </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ajouter un Utilisateur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="add_user.php" method="POST" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Rôle</label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="user">Utilisateur</option>
+                                <option value="editor">Éditeur</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="profile_picture" class="form-label">Photo de profil</label>
+                            <input type="file" class="form-control" id="profile_picture" name="profile_picture" accept="image/*">
+                            <img id="picturePreview" src="../img/default-avatar.png" class="profile-preview" alt="Aperçu">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modifier l'Utilisateur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="edit_user.php" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="user_id" id="editUserId">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editUsername" class="form-label">Nom d'utilisateur</label>
+                            <input type="text" class="form-control" id="editUsername" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editEmail" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPassword" class="form-label">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                            <input type="password" class="form-control" id="editPassword" name="password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editRole" class="form-label">Rôle</label>
+                            <select class="form-select" id="editRole" name="role" required>
+                                <option value="user">Utilisateur</option>
+                                <option value="editor">Éditeur</option>
+                                <option value="admin">Administrateur</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProfilePicture" class="form-label">Photo de profil</label>
+                            <input type="file" class="form-control" id="editProfilePicture" name="profile_picture" accept="image/*">
+                            <img id="editPicturePreview" src="../img/default-avatar.png" class="profile-preview" alt="Aperçu">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
 
     <script>
-        function filterUsers() {
-            const input = document.getElementById('searchInput').value.toLowerCase();
-            const table = document.getElementById('usersTable');
-            const rows = table.getElementsByTagName('tr');
-
-            for (let i = 1; i < rows.length; i++) { // Commence à 1 pour ignorer l'en-tête
-                const username = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
-                const email = rows[i].getElementsByTagName('td')[1].textContent.toLowerCase();
-                const role = rows[i].getElementsByTagName('td')[2].textContent.toLowerCase();
-
-                if (username.includes(input) || email.includes(input) || role.includes(input)) {
-                    rows[i].style.display = '';
-                } else {
-                    rows[i].style.display = 'none';
+        document.addEventListener('DOMContentLoaded', function() {
+            // Prévisualisation de l'image pour l'ajout d'utilisateur
+            document.getElementById('profile_picture').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('picturePreview').src = e.target.result;
+                    }
+                    reader.readAsDataURL(file);
                 }
-            }
-        }
+            });
+
+            // Prévisualisation de l'image pour l'édition d'utilisateur
+            document.getElementById('editProfilePicture').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('editPicturePreview').src = e.target.result;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Initialisation des modals Bootstrap
+            const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+
+            // Gestion du modal d'édition
+            document.querySelectorAll('.btn-edit').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.getAttribute('data-user-id');
+                    const username = this.getAttribute('data-username');
+                    const email = this.getAttribute('data-email');
+                    const role = this.getAttribute('data-role');
+                    const profilePicture = this.getAttribute('data-profile-picture');
+
+                    document.getElementById('editUserId').value = userId;
+                    document.getElementById('editUsername').value = username;
+                    document.getElementById('editEmail').value = email;
+                    document.getElementById('editRole').value = role;
+                    document.getElementById('editPicturePreview').src = '../' + (profilePicture || 'img/default-avatar.png');
+
+                    editModal.show();
+                });
+            });
+        });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 

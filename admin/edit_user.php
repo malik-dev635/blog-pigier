@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 
 // Récupérer l'ID de l'utilisateur à modifier
-$user_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$user_id = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
 
 // Récupérer les informations de l'utilisateur
 try {
@@ -37,11 +37,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['error_message'] = "Tous les champs sont obligatoires.";
     } else {
         try {
-            $stmt = $pdo->prepare("UPDATE users SET username = :username, email = :email, role = :role WHERE id = :user_id");
+            $profile_picture = $user['profile_picture']; // Garder l'ancienne image par défaut
+
+            // Traitement de l'upload de l'image
+            if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+                $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+                $filename = $_FILES['profile_picture']['name'];
+                $tmp_name = $_FILES['profile_picture']['tmp_name'];
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+                if (in_array($ext, $allowed)) {
+                    $new_filename = uniqid() . '.' . $ext;
+                    $upload_path = '../uploads/profiles/' . $new_filename;
+                    
+                    // Créer le dossier s'il n'existe pas
+                    if (!file_exists('../uploads/profiles/')) {
+                        mkdir('../uploads/profiles/', 0777, true);
+                    }
+
+                    if (move_uploaded_file($tmp_name, $upload_path)) {
+                        // Supprimer l'ancienne image si elle existe
+                        if ($user['profile_picture'] && file_exists('../' . $user['profile_picture'])) {
+                            unlink('../' . $user['profile_picture']);
+                        }
+                        $profile_picture = 'uploads/profiles/' . $new_filename;
+                    }
+                }
+            }
+
+            $stmt = $pdo->prepare("UPDATE users SET username = :username, email = :email, role = :role, profile_picture = :profile_picture WHERE id = :user_id");
             $stmt->execute([
                 ':username' => $username,
                 ':email' => $email,
                 ':role' => $role,
+                ':profile_picture' => $profile_picture,
                 ':user_id' => $user_id
             ]);
 
@@ -53,6 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+// Récupérer les informations de l'utilisateur connecté
+$user_query = "SELECT username, profile_picture, role FROM users WHERE id = ?";
+$stmt = $pdo->prepare($user_query);
+$stmt->execute([$_SESSION['user_id']]);
+$current_user = $stmt->fetch(PDO::FETCH_ASSOC);
+
 ?>
 
 <!DOCTYPE html>
@@ -62,278 +98,163 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Modifier l'utilisateur | Blog Pigier</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <style>
-            .dashboard {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background-color: #004494;
-            color: #fff;
-            padding: 1.5rem;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .sidebar h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .sidebar ul li {
-            margin-bottom: 1rem;
-        }
-
-        .sidebar ul li a {
-            color: #fff;
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .sidebar ul li a:hover {
-            color: #feca00;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 2rem;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #004494;
-        }
-
-        .btn-logout {
-            background-color: #feca00;
-            color: #004494;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-radius: 25px;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-logout:hover {
-            background-color: #e0b200;
-        }
-
-        .users-table {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .users-table h2 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #004494;
-            margin-bottom: 1.5rem;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .table th {
-            background-color: #004494;
-            color: #fff;
-            font-weight: 600;
-        }
-
-        .table tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .btn-action {
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-edit {
-            background-color: #feca00;
-            color: #004494;
-            border: none;
-        }
-
-        .btn-edit:hover {
-            background-color: #e0b200;
-        }
-
-        .btn-delete {
-            background-color: #dc3545;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-delete:hover {
-            background-color: #c82333;
-        }
-
-        .btn-save {
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-        }
-
-        .btn-save:hover {
-            background-color: #218838;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                height: auto;
-                padding: 1rem;
-            }
-
-            .sidebar h2 {
-                margin-bottom: 1rem;
-            }
-
-            .main-content {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .btn-logout {
-                padding: 0.5rem 1rem;
-            }
-
-            .users-table h2 {
-                font-size: 1.5rem;
-            }
-        }
-        .edit-user-container {
-            max-width: 600px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .edit-user-container h2 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            color: #004494;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .form-control {
-            border-radius: 8px;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-        }
-
-        .btn-save {
-            background-color: #004494;
-            color: #fff;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn-save:hover {
-            background-color: #003366;
-        }
-    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link rel="shortcut icon" href="../img/logo.png" />
 </head>
 <body>
     <div class="dashboard">
         <!-- Sidebar -->
         <div class="sidebar">
-            <h2>Dashboard</h2>
-            <ul>
-                <li><a href="dashboard.php">Tableau de bord</a></li>
-                <li><a href="articles.php">Gérer les articles</a></li>
-                <li><a href="users.php">Gérer les utilisateurs</a></li>
-                <li><a href="../auth/logout.php">Déconnexion</a></li>
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <img src="../<?php echo htmlspecialchars($current_user['profile_picture'] ?? 'img/default-avatar.png'); ?>" 
+                         alt="Photo de profil" 
+                         class="user-avatar">
+                    <div class="user-info">
+                        <span class="user-name"><?php echo htmlspecialchars($current_user['username']); ?></span>
+                        <span class="user-role"><?php echo ucfirst(htmlspecialchars($current_user['role'])); ?></span>
+                    </div>
+                </div>
+            </div>
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="dashboard.php">
+                        <i class="fas fa-newspaper"></i>
+                        Articles
+                    </a>
+                </li>
+                <li>
+                    <a href="categories.php">
+                        <i class="fas fa-tags"></i>
+                        Catégories
+                    </a>
+                </li>
+                <li>
+                    <a href="comments.php">
+                        <i class="fas fa-comments"></i>
+                        Commentaires
+                    </a>
+                </li>
+                <li>
+                    <a href="users.php" class="active">
+                        <i class="fas fa-users"></i>
+                        Utilisateurs
+                    </a>
+                </li>
+                <li>
+                    <a href="../index.php">
+                        <i class="fas fa-home"></i>
+                        Voir le site
+                    </a>
+                </li>
+                <li>
+                    <a href="../auth/logout.php">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Déconnexion
+                    </a>
+                </li>
             </ul>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="edit-user-container">
-                <h2>Modifier l'utilisateur</h2>
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-user-edit me-2"></i>Modifier l'utilisateur</h1>
+            </div>
+
+            <!-- Edit User Form Card -->
+            <div class="card">
+                <div class="card-body">
                 <?php if (isset($_SESSION['error_message'])): ?>
-                    <div class="alert alert-danger"><?= $_SESSION['error_message'] ?></div>
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <?= $_SESSION['error_message'] ?>
+                        </div>
                     <?php unset($_SESSION['error_message']); ?>
                 <?php endif; ?>
-                <form action="edit_user.php?id=<?= $user['id'] ?>" method="POST">
-                    <div class="form-group">
-                        <label for="username">Nom d'utilisateur</label>
-                        <input type="text" name="username" id="username" class="form-control" value="<?= htmlspecialchars($user['username']) ?>" required>
+
+                    <form action="edit_user.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                        <div class="mb-4 text-center">
+                            <img src="../<?= htmlspecialchars($user['profile_picture'] ?? 'img/default-avatar.png') ?>" 
+                                 alt="Photo de profil actuelle" 
+                                 class="rounded-circle mb-3"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                            <div class="mb-3">
+                                <label for="profile_picture" class="form-label">
+                                    <i class="fas fa-camera me-2"></i>Changer la photo de profil
+                                </label>
+                                <input type="file" 
+                                       name="profile_picture" 
+                                       id="profile_picture" 
+                                       class="form-control"
+                                       accept="image/jpeg,image/png,image/gif">
+                                <small class="text-muted">Formats acceptés : JPG, PNG, GIF</small>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="username" class="form-label">
+                                <i class="fas fa-user me-2"></i>Nom d'utilisateur
+                            </label>
+                            <input type="text" 
+                                   name="username" 
+                                   id="username" 
+                                   class="form-control" 
+                                   value="<?= htmlspecialchars($user['username']) ?>" 
+                                   required>
                     </div>
-                    <div class="form-group">
-                        <label for="email">Email</label>
-                        <input type="email" name="email" id="email" class="form-control" value="<?= htmlspecialchars($user['email']) ?>" required>
+                        <div class="mb-4">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Email
+                            </label>
+                            <input type="email" 
+                                   name="email" 
+                                   id="email" 
+                                   class="form-control" 
+                                   value="<?= htmlspecialchars($user['email']) ?>" 
+                                   required>
                     </div>
-                    <div class="form-group">
-                        <label for="role">Rôle</label>
-                        <select name="role" id="role" class="form-control" required>
+                        <div class="mb-4">
+                            <label for="role" class="form-label">
+                                <i class="fas fa-user-tag me-2"></i>Rôle
+                            </label>
+                            <select name="role" id="role" class="form-select" required>
                             <option value="user" <?= $user['role'] === 'user' ? 'selected' : '' ?>>Utilisateur</option>
                             <option value="editor" <?= $user['role'] === 'editor' ? 'selected' : '' ?>>Éditeur</option>
                             <option value="admin" <?= $user['role'] === 'admin' ? 'selected' : '' ?>>Administrateur</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-save">Enregistrer</button>
+                        <div class="d-flex gap-2">
+                            <a href="users.php" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Retour
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer
+                            </button>
+                        </div>
                 </form>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Prévisualisation de l'image
+        document.getElementById('profile_picture').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.querySelector('.rounded-circle');
+                    preview.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
 </body>
 </html>

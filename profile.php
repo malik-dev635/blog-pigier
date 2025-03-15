@@ -231,8 +231,19 @@ h2 {
               <p><strong>Email : </strong> <?= htmlspecialchars($user['email']); ?></p>
               <p><strong>Inscrit le :</strong> <?= date("d/m/Y", strtotime($user['created_at'])); ?></p>
               <p><strong>Articles publiés :</strong> <?= $article_count; ?></p>
-              <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editProfileModal">Modifier le profil</a>
-              <a href="auth/logout.php" class="btn btn-danger btn-sm">Déconnexion</a>
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="fas fa-user-edit me-2"></i>Modifier le profil
+                </button>
+                <?php if ($_SESSION['role'] === 'user'): ?>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roleRequestModal">
+                        <i class="fas fa-user-tag me-2"></i>Demander un rôle
+                    </button>
+                <?php endif; ?>
+                <a href="auth/logout.php" class="btn btn-outline-secondary">
+                    <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -270,61 +281,9 @@ h2 {
         </div>
       </div>
     </div>
+    <?php include 'component/footer.php' ?>
 
-    <footer class="blog-footer">
-    <div class="container">
-        <div class="footer-content">
-            <!-- Section 1 : Branding -->
-            <div class="footer-brand">
-                <a class="navbar-brand fw-bold" href="index.php" style="color: #fff; font-size: 4rem; display: flex; align-items: center; margin-bottom: 15px;">
-                    <img src="img/logo.png" alt="Logo" style="height: 70px; margin-right: 12px;" />
-                    Blog
-                </a>
-                <p class="footer-description">
-                    Explorez l'innovation et l'éducation à travers nos articles et ressources inspirants.
-                </p>
-            </div>
-
-           <!-- Section 2 : Liens rapides -->
-<div class="footer-links">
-    <h4>Liens rapides</h4>
-    <ul>
-        <li><a href="#"> Accueil<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-        <li><a href="#"> Articles<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-        <li><a href="#"> À propos<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-        <li><a href="https://www.pigierci.com/"> Site Officiel<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-        <li><a href="#"> Contact<i class="fa-sharp fa-solid fa-arrow-up-right-from-square"></i></a></li>
-    </ul>
-</div>
-
-
-            <!-- Section 3 : Newsletter -->
-            <div class="footer-newsletter">
-                <h4>Abonnez-vous</h4>
-                <p>Recevez les derniers articles directement dans votre boîte mail.</p>
-                <form>
-                    <input type="email" placeholder="Votre email..." required>
-                    <button type="submit">S'abonner</button>
-                </form>
-            </div>
-
-            <!-- Section 4 : Réseaux sociaux -->
-            <div class="footer-social">
-                <h4>Suivez-nous</h4>
-                <div class="social-icons">
-                    <a href="https://www.facebook.com/PIGIERCIOFFICIEL/" target="_blank"><i class="fab fa-facebook-f"></i></a>
-                    <a href="Instagram: https://www.instagram.com/pigierciofficiel/ " target="_blank"><i class="fab fa-instagram"></i></a>
-                    <a href="https://www.linkedin.com/school/pigiercotedivoire/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Copyright -->
-        <div class="footer-bottom">
-            <p>&copy; 2024 Blog Pigier. Tous droits réservés. | Conçu avec <i class="fas fa-heart"></i> par Malik.</p>
-        </div>
-    </div>
-</footer>
+ 
 
 
 <!-- Modal pour modifier le profil -->
@@ -404,6 +363,42 @@ h2 {
     });
   }
 </script>
+</div>
+
+<!-- Modal Demande de Rôle -->
+<div class="modal fade" id="roleRequestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-tag me-2"></i>Demande de changement de rôle
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="process_role_request.php" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="requested_role" class="form-label">Rôle souhaité</label>
+                        <select class="form-select" id="requested_role" name="requested_role" required>
+                            <option value="editor">Éditeur</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Motif de la demande</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="4" required placeholder="Expliquez pourquoi vous souhaitez devenir éditeur..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="experience" class="form-label">Expérience pertinente</label>
+                        <textarea class="form-control" id="experience" name="experience" rows="4" required placeholder="Décrivez votre expérience en rédaction ou édition..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Envoyer la demande</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
