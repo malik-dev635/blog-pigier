@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/includes/loader.php';
 session_start();
 
 if (!isset($_SESSION['user_id'])) {

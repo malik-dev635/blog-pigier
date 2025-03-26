@@ -5,11 +5,11 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Vérifier si l'utilisateur est connecté et a les droits admin
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'editor'])) {
     header("Location: ../auth/login.php?error=access_denied");
     exit;
 }
+
 
 // Récupérer les informations de l'utilisateur connecté
 $user_query = "SELECT username, profile_picture, role FROM users WHERE id = ?";
@@ -31,6 +31,14 @@ $article = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$article) {
     die("Article non trouvé.");
+}
+
+// Vérifier si l'utilisateur est l'auteur de l'article ou un administrateur
+if ($article['author_id'] !== $_SESSION['user_id'] && $_SESSION['role'] !== 'admin') {
+    // Rediriger vers la page précédente avec un message d'erreur
+    $_SESSION['error'] = "Vous n'avez pas l'autorisation de modifier cet article.";
+    header("Location: articles.php");
+    exit;
 }
 
 // Récupérer toutes les catégories disponibles

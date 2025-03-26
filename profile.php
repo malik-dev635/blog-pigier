@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/includes/loader.php';
 session_start();
 
 // Vérifier si l'utilisateur est connecté
@@ -163,8 +164,26 @@ h2 {
     </style>
   </head>
   <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-       <div class="container-fluid px-4 px-lg-5">
+  <!-- Navbar -->
+
+  <?php if (isset($_GET['login']) && $_GET['login'] === 'success'): ?>
+        <!-- Modal Bootstrap -->
+        <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-success text-white">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Connexion Réussie</h5>
+                    </div>
+                    <div class="modal-body">
+                        ✅ Bienvenue <?= htmlspecialchars($_SESSION['username'] ?? '') ?> ! Vous êtes maintenant connecté.
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container-fluid px-4 px-lg-5">
         <!-- Logo -->
         <a class="navbar-brand fw-bold" href="index.php" style="color: #020268">
             <img src="img/logo.png" alt="Logo" style="height: 40px" />
@@ -181,18 +200,38 @@ h2 {
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link text-dark active" href="index.php">Accueil</a>
+                    <a class="nav-link text-dark" href="index.php">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="article.php">Articles</a>
+                    <a class="nav-link text-dark" href="search-article.php">Articles</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link text-dark" href="#events">Événements</a>
+                </li>
+               <!-- <li class="nav-item">
                     <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-dark" href="contact.php">Contact</a>
-                </li>
+                </li>-->
             </ul>
+
+         <!-- Barre de recherche -->
+<div class="d-flex align-items-center ms-3">
+    <!-- Icône de loupe -->
+    <button id="searchToggle" class="btn btn-link text-dark p-0">
+        <i class="fas fa-search"></i>
+    </button>
+    <!-- Barre de recherche -->
+    <div id="searchBar" class="search-bar">
+        <form action="search-article.php" method="GET" class="d-flex align-items-center">
+            <input type="text" name="search" class="form-control" placeholder="Rechercher..." id="searchInput" />
+            <button id="closeSearch" class="btn btn-link text-dark p-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </form>
+    </div>
+</div>
 
             <?php if (isset($_SESSION['user_id'])): ?>
                 <!-- Utilisateur connecté : Affichage du profil -->
@@ -204,7 +243,7 @@ h2 {
                         <?php echo htmlspecialchars($_SESSION['username']); ?>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                        <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'editor')): ?>
                             <li><a class="dropdown-item text-danger fw-bold" href="admin/dashboard.php">Tableau de bord</a></li>
                             <li><hr class="dropdown-divider"></li>
                         <?php endif; ?>
@@ -217,8 +256,8 @@ h2 {
                 <a href="auth/login.php" class="btn btn-primary ms-3">Se Connecter</a>
             <?php endif; ?>
         </div>
-       </div>
-    </nav>
+    </div>
+</nav>
 
     <div class="container mt-4 mb-4">
       <div class="row">

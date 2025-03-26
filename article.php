@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/includes/loader.php';
 session_start();
 
 // Vérifier si l'ID de l'article est passé dans l'URL
@@ -23,6 +24,24 @@ $query = "
 $stmt = $pdo->prepare($query);
 $stmt->execute([':article_id' => $article_id]);
 $article = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Après la récupération de l'article principal, ajoutez ce code pour récupérer les articles similaires
+$query_similar = "
+    SELECT DISTINCT a.*, u.username AS author 
+    FROM articles a
+    JOIN users u ON a.author_id = u.id
+    JOIN article_category ac1 ON a.id = ac1.article_id
+    JOIN article_category ac2 ON ac1.category_id = ac2.category_id
+    WHERE ac2.article_id = :current_article_id
+    AND a.id != :current_article_id
+    ORDER BY a.created_at DESC
+    LIMIT 2";
+
+$stmt = $pdo->prepare($query_similar);
+$stmt->execute([
+    ':current_article_id' => $article_id
+]);
+$similar_articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Récupérer les commentaires de l'article
 // Récupérer les commentaires de l'article avec les informations de l'utilisateur
@@ -100,7 +119,7 @@ if (!$article) {
         .article-title {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #004494;
+            color: #333;
             margin-bottom: 1rem;
         }
 
@@ -137,41 +156,62 @@ if (!$article) {
         .sidebar h3 {
             font-size: 1.5rem;
             font-weight: 600;
-            color: #004494;
+            color: #333;
             margin-bottom: 1.5rem;
         }
 
         .sidebar-card {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            border: 1px solid #e9ecef;
+            background: white;
             border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .sidebar-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar-card img {
             width: 100%;
-            height: 150px;
+            height: 160px;
             object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 1rem;
+            border-radius: 8px;
+            margin-bottom: 15px;
         }
 
         .sidebar-card h4 {
             font-size: 1.1rem;
             font-weight: 600;
             color: #004494;
-            margin-bottom: 0.5rem;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .sidebar-card p {
             font-size: 0.9rem;
-            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-card .btn {
+            width: 100%;
+            padding: 8px;
+            background-color: #004494;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar-card .btn:hover {
+            background-color: #003377;
+        }
+
+        .text-muted i {
+            width: 16px;
+            text-align: center;
         }
 
         .social-links {
@@ -200,12 +240,334 @@ if (!$article) {
             }
 
             .sidebar {
-                order: -1;
+                position: relative;
+                top: 0;
+                order: 1;
+                margin-top: 20px;
             }
+
+            .article-content {
+                order: 0;
+            }
+        }
+
+        .article-strip {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100px;
+        }
+
+        .article-strip:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .article-strip-image {
+            width: 100px;
+            min-width: 100px;
+            height: 100px;
+        }
+
+        .article-strip-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .article-strip-content {
+            padding: 10px;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .article-strip h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .article-strip-meta {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .article-strip-meta span {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .article-strip-meta i {
+            width: 16px;
+            color: #004494;
+        }
+
+        .stretched-link::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            content: "";
+        }
+
+        @media (max-width: 768px) {
+            
+            .article-strip {
+                height: 80px;
+            }
+
+            .article-strip-image {
+                width: 80px;
+                min-width: 80px;
+                height: 80px;
+            }
+
+            .article-strip h4 {
+                font-size: 0.9rem;
+                -webkit-line-clamp: 1;
+            }
+        }
+
+        .blue-card {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .blue-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 68, 148, 0.3);
+        }
+
+        .blue-card a {
+            color: inherit;
+        }
+
+        .blue-card:hover::after {
+            content: "Visiter le site →";
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            color: white;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .events-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .events-card:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .event-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-date {
+            background: #004494;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 60px;
+            margin-right: 15px;
+        }
+
+        .event-day {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .event-month {
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .event-info {
+            flex: 1;
+        }
+
+        .event-info h5 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .event-description {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .event-location {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .event-location i {
+            color: #004494;
+            width: 16px;
+        }
+
+        /* Cartes d'articles similaires avec des couleurs variées */
+        .article-strip {
+            background: linear-gradient(to right, #f8f9fa, #ffffff);
+            border-left: 4px solid #004494;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Style pour les événements */
+        .events-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-radius: 15px;
+        }
+
+        .event-item {
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            padding: 15px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .event-date {
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+            border-radius: 10px;
+            padding: 10px;
+            color: white;
+            box-shadow: 0 3px 6px rgba(255,107,107,0.2);
+        }
+
+        /* Style pour la carte Pigier */
+        .blue-card {
+            background: #2e475d;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .blue-card img {
+            transform: scale(1.02);
+            transition: transform 0.3s ease;
+        }
+
+        .blue-card:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Style pour les liens sociaux */
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-links a {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+
+        .social-links .facebook {
+            background: #1877F2;
+        }
+
+        .social-links .instagram {
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+        }
+
+        .social-links .linkedin {
+            background: #0077B5;
+        }
+
+        .social-links a:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Style pour les titres de section */
+        .sidebar h3 {
+            color: #004494;
+            font-weight: 600;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .sidebar h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(to right, #004494, #006494);
+            border-radius: 3px;
+        }
+
+        /* Style pour les informations des événements */
+        .event-info h5 {
+            color: #004494;
+            font-weight: 600;
+        }
+
+        .event-location {
+            color: #666;
+        }
+
+        .event-location i {
+            color: #FF6B6B;
         }
     </style>
 </head>
 <body>
+    <!-- Navbar -->
+
+    <?php if (isset($_GET['login']) && $_GET['login'] === 'success'): ?>
+        <!-- Modal Bootstrap -->
+        <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-success text-white">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Connexion Réussie</h5>
+                    </div>
+                    <div class="modal-body">
+                        ✅ Bienvenue <?= htmlspecialchars($_SESSION['username'] ?? '') ?> ! Vous êtes maintenant connecté.
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
        <div class="container-fluid px-4 px-lg-5">
         <!-- Logo -->
@@ -224,30 +586,50 @@ if (!$article) {
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link text-dark active" href="index.php">Accueil</a>
+                    <a class="nav-link text-dark " href="index.php">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="article.php">Articles</a>
+                    <a class="nav-link text-dark active" href="search-article.php">Articles</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">À propos</a>
+                    <a class="nav-link text-dark" href="#events">Événements</a>
+                </li>
+               <!-- <li class="nav-item">
+                    <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link text-dark" href="#">Contact</a>
-                </li>
+                    <a class="nav-link text-dark" href="contact.php">Contact</a>
+                </li>-->
             </ul>
+
+         <!-- Barre de recherche -->
+<div class="d-flex align-items-center ms-3">
+    <!-- Icône de loupe -->
+    <button id="searchToggle" class="btn btn-link text-dark p-0">
+        <i class="fas fa-search"></i>
+    </button>
+    <!-- Barre de recherche -->
+    <div id="searchBar" class="search-bar">
+        <form action="search-article.php" method="GET" class="d-flex align-items-center">
+            <input type="text" name="search" class="form-control" placeholder="Rechercher..." id="searchInput" />
+            <button id="closeSearch" class="btn btn-link text-dark p-2">
+                <i class="fas fa-times"></i>
+            </button>
+        </form>
+    </div>
+</div>
 
             <?php if (isset($_SESSION['user_id'])): ?>
                 <!-- Utilisateur connecté : Affichage du profil -->
                 <div class="dropdown ms-3">
-                    <button class="btn btn-light dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown"
+                    <button class="btn dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown"
                         aria-expanded="false">
                         <img src="<?php echo isset($_SESSION['profile_picture']) ? htmlspecialchars($_SESSION['profile_picture']) : 'img-profile/default-avatar.png'; ?>" 
                             alt="Profil" class="rounded-circle" style="width: 40px; height: 40px;">
                         <?php echo htmlspecialchars($_SESSION['username']); ?>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+                        <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'editor')): ?>
                             <li><a class="dropdown-item text-danger fw-bold" href="admin/dashboard.php">Tableau de bord</a></li>
                             <li><hr class="dropdown-divider"></li>
                         <?php endif; ?>
@@ -267,9 +649,9 @@ if (!$article) {
         <div class="article-content">
             <h1 class="article-title"><?= htmlspecialchars($article['title']) ?></h1>
             <div class="article-meta">
-                Publié le <?= date('d M Y', strtotime($article['created_at'])) ?> par 
+    Publié le <?= date('d M Y', strtotime($article['created_at'])) ?> par 
                 <strong><?= htmlspecialchars($article['author']) ?></strong>
-            </div>
+</div>
             <img src="<?= htmlspecialchars($article['image']) ?>" alt="Article Image" class="article-image" />
             <div class="article-text">
                 <?=$article['content'] ?>
@@ -332,93 +714,100 @@ if (!$article) {
 </div>
         </div>
 <style>
-    
+
 </style>
         <!-- Sidebar avec cartes et liens -->
         <div class="sidebar" style="position: sticky;">
              <!-- Liens vers les réseaux sociaux -->
              <h3>Suivez-nous</h3>
              <div class="social-links mb-5">
-        <a href="#" target="_blank" class="facebook">
+        <a href="https://www.facebook.com/profile.php?id=100090831890714" target="_blank" class="facebook">
             <i class="fab fa-facebook-f"></i>
         </a>
         <a href="#" target="_blank" class="instagram">
             <i class="fab fa-instagram"></i>
         </a>
-        <a href="#" target="_blank" class="linkedin">
+        <a href="https://www.linkedin.com/school/pigiercotedivoire/" target="_blank" class="linkedin">
             <i class="fab fa-linkedin-in"></i>
         </a>
     </div>
-<style>.social-links {
-    display: flex;
-    gap: 10px; /* Espace entre les boutons */
-}
 
-.social-links a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px;
-    border-radius: 8px;
-    text-decoration: none;
-    color: white;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.3s, transform 0.3s;
-}
+    <!-- Articles similaires -->
+    <h3 class="mb-4">Articles similaires</h3>
+    <?php if (!empty($similar_articles)): ?>
+        <?php foreach ($similar_articles as $similar): ?>
+            <div class="article-strip">
+                <div class="article-strip-image">
+                    <img src="<?= htmlspecialchars($similar['image']) ?>" alt="<?= htmlspecialchars($similar['title']) ?>" />
+                </div>
+                <div class="article-strip-content">
+                    <h4><?= htmlspecialchars($similar['title']) ?></h4>
+                    <div class="article-strip-meta">
+                        <span><i class="far fa-user me-1"></i><?= htmlspecialchars($similar['author']) ?></span>
+                        <span><i class="far fa-calendar me-1"></i><?= date('d M Y', strtotime($similar['created_at'])) ?></span>
+                    </div>
+                    <a href="article.php?id=<?= $similar['id'] ?>" class="stretched-link"></a>
+            </div>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="article-strip">
+            <p class="text-muted mb-0">Aucun article similaire trouvé.</p>
+        </div>
+    <?php endif; ?>
 
-.social-links a i {
-    margin-right: 8px; /* Espace entre l'icône et le texte */
-}
+         
 
-/* Couleurs spécifiques pour chaque réseau social */
-.social-links a.facebook {
-    background-color: #1877f2; /* Bleu Facebook */
-}
-
-.social-links a.instagram {
-    background: linear-gradient(45deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
-    color: white;
-}
-
-.social-links a.instagram:hover {
-    background: linear-gradient(45deg, #344abf, #4a43c0, #6f2f9e, #a82a6f, #c8235c, #e61414);
-}
-
-.social-links a.linkedin {
-    background-color: #0077b5; /* Bleu LinkedIn */
-}
-
-/* Effets au survol */
-.social-links a:hover {
-    transform: translateY(-2px); /* Légère élévation */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.social-links a.facebook:hover {
-    background-color: #166fe5; /* Bleu Facebook plus foncé */
-}
-
-
-
-.social-links a.linkedin:hover {
-    background-color: #006097; /* Bleu LinkedIn plus foncé */
-}</style>
-            <!-- Publicité ou article récent -->
-            <div class="sidebar-card">
-                <img src="img/hero-bg.jpg" alt="Publicité" />
-                <h4>Publicité</h4>
-                <p>Découvrez nos offres spéciales pour les enseignants.</p>
+            <!-- EVENEMENT -->
+            <div class="sidebar-card events-card">
+                <h4><i class="far fa-calendar-alt me-2"></i>Événements à venir</h4>
+                <?php
+                // Récupérer les 3 prochains événements
+                $events_query = "SELECT * FROM events 
+                                WHERE event_date >= CURDATE() 
+                                ORDER BY event_date ASC 
+                                LIMIT 3";
+                $events_stmt = $pdo->query($events_query);
+                $upcoming_events = $events_stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                if (!empty($upcoming_events)): ?>
+                    <div class="events-list">
+                        <?php foreach ($upcoming_events as $event): ?>
+                            <div class="event-item">
+                                <div class="event-date">
+                                    <span class="event-day"><?= date('d', strtotime($event['event_date'])) ?></span>
+                                    <span class="event-month"><?= date('M', strtotime($event['event_date'])) ?></span>
+                                </div>
+                                <div class="event-info">
+                                    <h5><?= htmlspecialchars($event['title']) ?></h5>
+                                    <?php if (isset($event['description'])): ?>
+                                        <p class="event-description">
+                                            <?= htmlspecialchars(substr($event['description'], 0, 50)) ?>...
+                                        </p>
+                                    <?php endif; ?>
+                                    <?php if (isset($event['location'])): ?>
+                                        <p class="event-location">
+                                            <i class="fas fa-map-marker-alt me-1"></i>
+                                            <?= htmlspecialchars($event['location']) ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+            </div>
+                        <?php endforeach; ?>
+</div>
+                <?php else: ?>
+                    <p class="text-muted text-center my-3">Aucun événement à venir</p>
+                <?php endif; ?>
             </div>
 
-            <!-- Article récemment lu -->
-            <div class="sidebar-card">
-                <img src="img/hero-bg.jpg" alt="Article Récent" />
-                <h4>Article Récent</h4>
-                <p>L'avenir de l'éducation en ligne.</p>
+              <!-- Publicité cliquable -->
+            <div class="sidebar-card blue-card" style="background: linear-gradient(135deg, #2e475d, #2e475d);">
+                <a href="https://pigierci.com" target="_blank" class="text-decoration-none stretched-link">
+                    <img src="img/pigiercotedivoire_cover.jpeg" alt="Publicité" />
+                    <h4 class="text-white">REJOIGNEZ PIGIER CÔTE D'IVOIRE</h4>
+                    <p class="text-white-50">Formation d'excellence • Diplômes reconnus • Réseau international • Opportunités professionnelles</p>
+                </a>
             </div>
-
-           
         </div>
     </div>
 

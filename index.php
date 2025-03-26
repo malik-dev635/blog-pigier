@@ -78,12 +78,12 @@ session_start()
                 <li class="nav-item">
                     <a class="nav-link text-dark" href="#events">Événements</a>
                 </li>
-                <li class="nav-item">
+               <!-- <li class="nav-item">
                     <a class="nav-link text-dark" href="about.php">À propos</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-dark" href="contact.php">Contact</a>
-                </li>
+                </li>-->
             </ul>
 
          <!-- Barre de recherche -->
@@ -212,7 +212,7 @@ foreach ($all_articles as $article) {
     
     // N'ajouter que si nous avons moins de 3 articles pour cette catégorie
     if (count($articles_by_category[$category_name]) < 3) {
-        $articles_by_category[$category_name][] = $article;
+    $articles_by_category[$category_name][] = $article;
     }
 }
 ?>
@@ -689,7 +689,7 @@ if (!empty($top_contributors)): ?>
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <div class="campus-card">
-                        <img src="img/img-batiment.jpg" alt="Campus Life" class="img-fluid">
+                        <img src="img/assale-ibra.jpg" alt="Campus Life" class="img-fluid">
                         <div class="campus-overlay">
                             <div class="campus-content">
                                 <h4>Activités</h4>
@@ -700,7 +700,7 @@ if (!empty($top_contributors)): ?>
                 </div>
                 <div class="col-lg-4 col-md-6">
                     <div class="campus-card">
-                        <img src="img/img-batiment.jpg" alt="Campus Life" class="img-fluid">
+                        <img src="img/codeur.jpeg" alt="Campus Life" class="img-fluid">
                         <div class="campus-overlay">
                             <div class="campus-content">
                                 <h4>Innovation</h4>
@@ -1058,11 +1058,11 @@ if (!empty($top_contributors)): ?>
             const navbar = document.querySelector(".navbar");
             if (window.scrollY > 50) {
                 navbar.classList.add("scrolled");
-            } else {
+    } else {
                 navbar.classList.remove("scrolled");
-            }
+    }
         });
-    });
+});
 </script>
 
 

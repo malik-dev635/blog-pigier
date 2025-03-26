@@ -177,6 +177,7 @@ try {
             </div>
         </div>
     </div>
+    <?php include 'includes/footer.php'; ?>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

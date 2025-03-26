@@ -29,9 +29,9 @@ try {
 // Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Sécuriser les entrées utilisateur
-    $title = htmlspecialchars(trim($_POST['title']));
+    $title = htmlspecialchars(trim($_POST['title']), ENT_NOQUOTES);
     $content = trim($_POST['content']);
-    $category_id = (int) $_POST['category_id']; // Assurer un entier
+    $category_id = (int) $_POST['category_id']; 
     $author_id = $_SESSION['user_id'];
 
     // Vérifier si tous les champs sont remplis
@@ -290,6 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 </div>
+<?php include 'includes/footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 <script>

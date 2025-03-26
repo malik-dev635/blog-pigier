@@ -168,6 +168,7 @@ try {
             </div>
         </div>
     </div>
+    <?php include 'includes/footer.php'; ?>
 
     <script>
         // Fonction de recherche améliorée

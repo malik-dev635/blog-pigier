@@ -3,7 +3,7 @@
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-6">
-                <p class="mb-0 text-muted">&copy; <?php echo date('Y'); ?> Dashboard Pigier Yamoussoukro. Tous droits réservés.</p>
+                <p class="mb-0 text-muted">&copy; <?php echo date('Y'); ?> Pigier Yamoussoukro. Tous droits réservés.</p>
             </div>
             <div class="col-md-6 text-md-end">
                 <p class="mb-0 text-muted">Version 1.0 | <i class="fas fa-code text-primary"></i> Malik</p>
@@ -22,7 +22,7 @@
         if (mainContent && footer) {
             // Fonction pour ajuster le footer
             function adjustFooter() {
-                // Calculer la largeur disponible pour le footer (en tenant compte de la sidebar)
+                // Calculer la largeur disponible pour le footer 
                 if (sidebar && window.innerWidth > 768) {
                     const sidebarWidth = sidebar.offsetWidth;
                     footer.style.marginLeft = sidebarWidth + 'px';

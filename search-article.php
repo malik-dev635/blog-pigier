@@ -141,11 +141,15 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <a class="nav-link text-dark active" href="search-article.php">Articles</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link text-dark" href="about.php">À propos</a>
+                        <a class="nav-link text-dark" href="index.php#events">Événements</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" href="contact.php">Contact</a>
-                    </li>
+
+                     <!-- <li class="nav-item">
+                    <a class="nav-link text-dark" href="about.php">À propos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-dark" href="contact.php">Contact</a>
+                </li>-->
                 </ul>
 
                 <!-- Barre de recherche -->
@@ -276,7 +280,6 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .btn-primary {
             padding: 0.6rem 1rem;
             font-weight: 500;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
             transition: all 0.3s ease;
         }

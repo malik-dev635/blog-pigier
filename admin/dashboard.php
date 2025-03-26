@@ -104,6 +104,7 @@ unset($_SESSION['success_message']);
 
         <!-- Main Content -->
         <div class="main-content">
+
             <!-- Header -->
             <div class="header mb-4">
                 <div class="d-flex align-items-center justify-content-between w-100">
@@ -421,9 +422,9 @@ unset($_SESSION['success_message']);
         .dashboard {
             display: flex;
             min-height: 100vh;
-            background-color: #f8f9fa;
-        }
-        
+  background-color: #f8f9fa;
+}
+
         .main-content {
             flex: 1;
             padding: 1.25rem;
@@ -458,7 +459,7 @@ unset($_SESSION['success_message']);
         
         /* Styles pour les cartes */
         .dashboard-card {
-            border: none;
+  border: none;
             border-radius: 0.5rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -529,7 +530,7 @@ unset($_SESSION['success_message']);
             position: relative;
             padding: 1rem;
             height: 100%;
-            display: flex;
+  display: flex;
             flex-direction: column;
         }
         
@@ -592,7 +593,7 @@ unset($_SESSION['success_message']);
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 1rem;
+  padding: 1rem;
             background-color: #fff;
             border-radius: 0.5rem;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
